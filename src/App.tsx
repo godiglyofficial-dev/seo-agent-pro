@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "motion/react";
+import { QRCodeSVG } from "qrcode.react";
 import { 
   Search, 
   Globe, 
@@ -49,7 +50,21 @@ import {
   MessageSquare,
   Shield,
   Send,
-  Users
+  Users,
+  QrCode,
+  Menu,
+  X,
+  Type,
+  PencilLine,
+  ScanSearch,
+  Link,
+  DollarSign,
+  TrendingUp,
+  Hash,
+  Share2,
+  ImagePlus,
+  Palette,
+  CreditCard
 } from "lucide-react";
 import { GoogleGenAI } from "@google/genai";
 import ReactMarkdown from "react-markdown";
@@ -63,7 +78,10 @@ import {
   GoogleAuthProvider, 
   onAuthStateChanged, 
   signOut,
-  User
+  User,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile
 } from "firebase/auth";
 import { 
   collection, 
@@ -251,7 +269,158 @@ interface AdminStats {
   totalBlogs: number;
 }
 
-type View = "audit" | "history" | "keywords" | "writer" | "tools" | "images" | "code" | "architect" | "video" | "speedtest" | "naming" | "chat" | "admin";
+type View = "audit" | "history" | "keywords" | "writer" | "tools" | "images" | "code" | "architect" | "video" | "speedtest" | "naming" | "chat" | "admin" | "qr" | "wordcounter" | "rewrite" | "plagiarism" | "backlinks" | "domainvalue" | "domaintraffic" | "hashtags" | "socialkeywords" | "thumbnail" | "logo" | "businesscard";
+
+function Sidebar({ 
+  view, 
+  setView, 
+  user, 
+  isAdminUser, 
+  isOpen, 
+  setIsOpen 
+}: { 
+  view: View; 
+  setView: (v: View) => void; 
+  user: User | null; 
+  isAdminUser: boolean; 
+  isOpen: boolean; 
+  setIsOpen: (o: boolean) => void 
+}) {
+  const menuItems = [
+    { id: "audit", label: "Audit", icon: Globe },
+    { id: "tools", label: "Tools", icon: LayoutGrid, auth: true },
+    { id: "keywords", label: "Keywords", icon: Search, auth: true },
+    { id: "writer", label: "Writer", icon: FileText, auth: true },
+    { id: "wordcounter", label: "Word Count", icon: Type, auth: true },
+    { id: "rewrite", label: "Rewrite", icon: PencilLine, auth: true },
+    { id: "plagiarism", label: "Plagiarism", icon: ScanSearch, auth: true },
+    { id: "backlinks", label: "Backlinks", icon: Link, auth: true },
+    { id: "domainvalue", label: "Value", icon: DollarSign, auth: true },
+    { id: "domaintraffic", label: "Traffic", icon: TrendingUp, auth: true },
+    { id: "hashtags", label: "Hashtags", icon: Hash, auth: true },
+    { id: "socialkeywords", label: "Social Keywords", icon: Share2, auth: true },
+    { id: "thumbnail", label: "Thumbnail", icon: ImagePlus, auth: true },
+    { id: "logo", label: "Logo", icon: Palette, auth: true },
+    { id: "businesscard", label: "Business Card", icon: CreditCard, auth: true },
+    { id: "images", label: "Images", icon: ImageIcon, auth: true },
+    { id: "video", label: "Video", icon: Video, auth: true },
+    { id: "speedtest", label: "Speed", icon: Activity, auth: true },
+    { id: "naming", label: "Naming", icon: Lightbulb, auth: true },
+    { id: "qr", label: "QR", icon: QrCode, auth: true },
+    { id: "chat", label: "Chat", icon: MessageSquare, auth: true },
+    { id: "code", label: "Forge", icon: CodeIcon, auth: true },
+    { id: "architect", label: "Architect", icon: Layers, auth: true },
+    { id: "history", label: "History", icon: History, auth: true },
+    { id: "admin", label: "Admin", icon: Shield, auth: true, admin: true },
+  ];
+
+  return (
+    <>
+      {/* Mobile Overlay */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setIsOpen(false)}
+            className="fixed inset-0 bg-neutral-950/80 backdrop-blur-sm z-50 lg:hidden"
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Sidebar */}
+      <motion.aside
+        initial={false}
+        animate={{ 
+          x: isOpen ? 0 : -280,
+          width: isOpen ? 280 : 0
+        }}
+        className={cn(
+          "fixed top-0 left-0 h-full bg-neutral-900 border-r border-white/10 z-[60] overflow-hidden flex flex-col transition-all duration-300",
+          !isOpen && "lg:w-20 lg:translate-x-0"
+        )}
+      >
+        <div className="p-6 flex items-center gap-3 border-b border-white/5 h-20 shrink-0">
+          <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center shrink-0">
+            <Zap className="w-5 h-5 text-neutral-950 fill-current" />
+          </div>
+          <span className={cn("font-bold text-lg tracking-tight whitespace-nowrap transition-opacity duration-300", !isOpen && "lg:opacity-0")}>
+            SEO Agent <span className="text-emerald-400">Pro</span>
+          </span>
+        </div>
+
+        <nav className="flex-1 overflow-y-auto py-6 px-3 space-y-1 custom-scrollbar">
+          {menuItems.map((item) => {
+            if (item.auth && !user) return null;
+            if (item.admin && !isAdminUser) return null;
+
+            const Icon = item.icon;
+            const isActive = view === item.id;
+
+            return (
+              <button
+                key={item.id}
+                onClick={() => {
+                  setView(item.id as View);
+                  if (window.innerWidth < 1024) setIsOpen(false);
+                }}
+                className={cn(
+                  "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group relative",
+                  isActive 
+                    ? "bg-emerald-500/10 text-emerald-400" 
+                    : "text-neutral-400 hover:text-white hover:bg-white/5"
+                )}
+              >
+                <Icon className={cn("w-5 h-5 shrink-0", isActive ? "text-emerald-400" : "group-hover:scale-110 transition-transform")} />
+                <span className={cn("text-sm font-medium whitespace-nowrap transition-opacity duration-300", !isOpen && "lg:opacity-0")}>
+                  {item.label}
+                </span>
+                {isActive && (
+                  <motion.div 
+                    layoutId="active-pill"
+                    className="absolute left-0 w-1 h-6 bg-emerald-500 rounded-r-full"
+                  />
+                )}
+              </button>
+            );
+          })}
+        </nav>
+
+        {user && (
+          <div className="p-4 border-t border-white/5 space-y-4">
+            <div className={cn("flex items-center gap-3 px-2 transition-opacity duration-300", !isOpen && "lg:opacity-0 lg:w-0 overflow-hidden")}>
+              <img 
+                src={user.photoURL || `https://ui-avatars.com/api/?name=${user.displayName || user.email}&background=10b981&color=fff`} 
+                alt="" 
+                className="w-8 h-8 rounded-full border border-white/10 shrink-0" 
+                referrerPolicy="no-referrer" 
+              />
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-white truncate">{user.displayName || user.email?.split('@')[0]}</p>
+                <p className="text-[10px] text-neutral-500 truncate uppercase tracking-widest font-bold">
+                  {isAdminUser ? "Administrator" : "Standard User"}
+                </p>
+              </div>
+            </div>
+            <button 
+              onClick={() => signOut(auth)}
+              className={cn(
+                "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-neutral-400 hover:text-red-400 hover:bg-red-400/5 transition-all group",
+                !isOpen && "lg:justify-center"
+              )}
+            >
+              <LogOut className="w-5 h-5 shrink-0 group-hover:rotate-12 transition-transform" />
+              <span className={cn("text-sm font-medium whitespace-nowrap transition-opacity duration-300", !isOpen && "lg:opacity-0 lg:w-0 overflow-hidden")}>
+                Sign Out
+              </span>
+            </button>
+          </div>
+        )}
+      </motion.aside>
+    </>
+  );
+}
 
 export default function App() {
   return (
@@ -264,6 +433,7 @@ export default function App() {
 function AppContent() {
   const [user, setUser] = useState<User | null>(null);
   const [view, setView] = useState<View>("audit");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [url, setUrl] = useState("");
   const [isAuditing, setIsAuditing] = useState(false);
   const [auditData, setAuditData] = useState<AuditData | null>(null);
@@ -279,6 +449,57 @@ function AppContent() {
   const [writerWebsiteUrl, setWriterWebsiteUrl] = useState("");
   const [writerTone, setWriterTone] = useState("Professional yet conversational");
   const [isWriting, setIsWriting] = useState(false);
+
+  // Word Counter State
+  const [wordCountText, setWordCountText] = useState("");
+  
+  // Article Rewrite State
+  const [rewriteText, setRewriteText] = useState("");
+  const [rewriteResult, setRewriteResult] = useState("");
+  const [isRewriting, setIsRewriting] = useState(false);
+  
+  // Plagiarism Checker State
+  const [plagiarismText, setPlagiarismText] = useState("");
+  const [plagiarismResult, setPlagiarismResult] = useState<any>(null);
+  const [isCheckingPlagiarism, setIsCheckingPlagiarism] = useState(false);
+  
+  // Backlinks State
+  const [backlinkUrl, setBacklinkUrl] = useState("");
+  const [backlinkResult, setBacklinkResult] = useState<any>(null);
+  const [isCheckingBacklinks, setIsCheckingBacklinks] = useState(false);
+  
+  // Domain Value State
+  const [domainValueUrl, setDomainValueUrl] = useState("");
+  const [domainValueResult, setDomainValueResult] = useState<any>(null);
+  const [isCheckingDomainValue, setIsCheckingDomainValue] = useState(false);
+  
+  // Domain Traffic State
+  const [domainTrafficUrl, setDomainTrafficUrl] = useState("");
+  const [domainTrafficResult, setDomainTrafficResult] = useState<any>(null);
+  const [isCheckingDomainTraffic, setIsCheckingDomainTraffic] = useState(false);
+  
+  // Social Video Hashtags State
+  const [hashtagTopic, setHashtagTopic] = useState("");
+  const [hashtagResult, setHashtagResult] = useState<{ hashtags: string[]; strategy: string[] } | null>(null);
+  const [isGeneratingHashtags, setIsGeneratingHashtags] = useState(false);
+  
+  // Social Media Keyword Research State
+  const [socialKeywordNiche, setSocialKeywordNiche] = useState("");
+  const [socialKeywordResult, setSocialKeywordResult] = useState<{ platforms: { name: string; keywords: { term: string; trend: string }[] }[] } | null>(null);
+  const [isResearchingSocialKeywords, setIsResearchingSocialKeywords] = useState(false);
+  
+  // Image Generation States
+  const [thumbnailPrompt, setThumbnailPrompt] = useState("");
+  const [thumbnailResult, setThumbnailResult] = useState<string | null>(null);
+  const [isGeneratingThumbnail, setIsGeneratingThumbnail] = useState(false);
+  
+  const [logoPrompt, setLogoPrompt] = useState("");
+  const [logoResult, setLogoResult] = useState<string | null>(null);
+  const [isGeneratingLogo, setIsGeneratingLogo] = useState(false);
+  
+  const [businessCardPrompt, setBusinessCardPrompt] = useState("");
+  const [businessCardResult, setBusinessCardResult] = useState<string | null>(null);
+  const [isGeneratingBusinessCard, setIsGeneratingBusinessCard] = useState(false);
   const [generatedBlog, setGeneratedBlog] = useState<{ title: string; content: string; imageUrl?: string } | null>(null);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
@@ -338,6 +559,14 @@ function AppContent() {
     domains: { domain: string; tld: string }[];
   } | null>(null);
 
+  // QR Generator State
+  const [qrInput, setQrInput] = useState("https://google.com");
+  const [qrSize, setQrSize] = useState(256);
+  const [qrFgColor, setQrFgColor] = useState("#000000");
+  const [qrBgColor, setQrBgColor] = useState("#ffffff");
+  const [qrLevel, setQrLevel] = useState<"L" | "M" | "Q" | "H">("M");
+  const [qrIncludeMargin, setQrIncludeMargin] = useState(true);
+
   // Chat State
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [chatInput, setChatInput] = useState("");
@@ -347,6 +576,8 @@ function AppContent() {
   const [isAdminUser, setIsAdminUser] = useState(false);
   const [adminStats, setAdminStats] = useState<AdminStats | null>(null);
   const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<"signin" | "signup">("signin");
 
   const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -451,8 +682,11 @@ function AppContent() {
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
+      setIsAuthModalOpen(false);
+      setError(null);
     } catch (err: any) {
-      setError("Failed to sign in. Please try again.");
+      console.error("Login error:", err);
+      setError(err.message || "Failed to sign in. Please try again.");
     }
   };
 
@@ -1017,6 +1251,229 @@ function AppContent() {
     }
   };
 
+  const rewriteArticle = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rewriteText.trim()) return;
+    setIsRewriting(true);
+    setRewriteResult("");
+    try {
+      const model = "gemini-3-flash-preview";
+      const prompt = `Rewrite the following article to make it more engaging, SEO-friendly, and unique while maintaining the original meaning: "${rewriteText}"`;
+      const result = await genAI.models.generateContent({ model, contents: prompt });
+      setRewriteResult(result.text || "");
+    } catch (err) {
+      console.error("Rewrite error:", err);
+      setError("Failed to rewrite article.");
+    } finally {
+      setIsRewriting(false);
+    }
+  };
+
+  const checkPlagiarism = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!plagiarismText.trim()) return;
+    setIsCheckingPlagiarism(true);
+    setPlagiarismResult(null);
+    try {
+      const model = "gemini-3-flash-preview";
+      const prompt = `Analyze the following text for potential plagiarism. Provide a score (0-100) where 100 means highly likely to be plagiarized, and list any potential sources or reasons for the score. Return as JSON: { "score": number, "analysis": "string", "sources": ["string"] }. Text: "${plagiarismText}"`;
+      const result = await genAI.models.generateContent({ 
+        model, 
+        contents: prompt,
+        config: { responseMimeType: "application/json" }
+      });
+      setPlagiarismResult(JSON.parse(result.text || "{}"));
+    } catch (err) {
+      console.error("Plagiarism check error:", err);
+      setError("Failed to check plagiarism.");
+    } finally {
+      setIsCheckingPlagiarism(false);
+    }
+  };
+
+  const checkBacklinks = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!backlinkUrl.trim()) return;
+    setIsCheckingBacklinks(true);
+    setBacklinkResult(null);
+    try {
+      const model = "gemini-3-flash-preview";
+      const prompt = `Analyze the backlink profile for the domain "${backlinkUrl}". Since you don't have live access to a backlink database, provide an expert estimation of what a typical backlink profile for a site in this niche would look like, and suggest 10 high-quality backlink opportunities. Return as JSON: { "estimatedBacklinks": number, "domainAuthority": number, "opportunities": [{ "site": "string", "type": "string", "difficulty": "string" }] }`;
+      const result = await genAI.models.generateContent({ 
+        model, 
+        contents: prompt,
+        config: { responseMimeType: "application/json" }
+      });
+      setBacklinkResult(JSON.parse(result.text || "{}"));
+    } catch (err) {
+      console.error("Backlinks check error:", err);
+      setError("Failed to check backlinks.");
+    } finally {
+      setIsCheckingBacklinks(false);
+    }
+  };
+
+  const checkDomainValue = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!domainValueUrl.trim()) return;
+    setIsCheckingDomainValue(true);
+    setDomainValueResult(null);
+    try {
+      const model = "gemini-3-flash-preview";
+      const prompt = `Estimate the market value of the domain "${domainValueUrl}". Consider keyword relevance, length, TLD, and brandability. Return as JSON: { "estimatedValue": "string", "valuationFactors": ["string"], "comparableSales": ["string"] }`;
+      const result = await genAI.models.generateContent({ 
+        model, 
+        contents: prompt,
+        config: { responseMimeType: "application/json" }
+      });
+      setDomainValueResult(JSON.parse(result.text || "{}"));
+    } catch (err) {
+      console.error("Domain value error:", err);
+      setError("Failed to check domain value.");
+    } finally {
+      setIsCheckingDomainValue(false);
+    }
+  };
+
+  const checkDomainTraffic = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!domainTrafficUrl.trim()) return;
+    setIsCheckingDomainTraffic(true);
+    setDomainTrafficResult(null);
+    try {
+      const model = "gemini-3-flash-preview";
+      const prompt = `Estimate the monthly traffic for the domain "${domainTrafficUrl}". Provide a breakdown by source (Organic, Direct, Social, Referral). Return as JSON: { "monthlyVisits": "string", "trafficSources": { "organic": "string", "direct": "string", "social": "string", "referral": "string" }, "topKeywords": ["string"] }`;
+      const result = await genAI.models.generateContent({ 
+        model, 
+        contents: prompt,
+        config: { responseMimeType: "application/json" }
+      });
+      setDomainTrafficResult(JSON.parse(result.text || "{}"));
+    } catch (err) {
+      console.error("Domain traffic error:", err);
+      setError("Failed to check domain traffic.");
+    } finally {
+      setIsCheckingDomainTraffic(false);
+    }
+  };
+
+  const generateHashtags = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!hashtagTopic.trim()) return;
+    setIsGeneratingHashtags(true);
+    setHashtagResult(null);
+    try {
+      const model = "gemini-3-flash-preview";
+      const prompt = `Generate 30 trending and relevant hashtags for a social media video about "${hashtagTopic}". Also provide 5 strategy tips for maximum reach. Return as JSON: { "hashtags": ["string"], "strategy": ["string"] }`;
+      const result = await genAI.models.generateContent({ 
+        model, 
+        contents: prompt,
+        config: { responseMimeType: "application/json" }
+      });
+      const data = JSON.parse(result.text || "{}");
+      setHashtagResult(data);
+    } catch (err) {
+      console.error("Hashtag error:", err);
+      setError("Failed to generate hashtags.");
+    } finally {
+      setIsGeneratingHashtags(false);
+    }
+  };
+
+  const researchSocialKeywords = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!socialKeywordNiche.trim()) return;
+    setIsResearchingSocialKeywords(true);
+    setSocialKeywordResult(null);
+    try {
+      const model = "gemini-3-flash-preview";
+      const prompt = `Perform social media keyword research for the niche "${socialKeywordNiche}". Identify trending keywords for YouTube, TikTok, Instagram, and Twitter. Return as JSON: { "platforms": [{ "name": "string", "keywords": [{ "term": "string", "trend": "string" }] }] }`;
+      const result = await genAI.models.generateContent({ 
+        model, 
+        contents: prompt,
+        config: { responseMimeType: "application/json" }
+      });
+      setSocialKeywordResult(JSON.parse(result.text || "{}"));
+    } catch (err) {
+      console.error("Social keywords error:", err);
+      setError("Failed to research social keywords.");
+    } finally {
+      setIsResearchingSocialKeywords(false);
+    }
+  };
+
+  const generateThumbnail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!thumbnailPrompt.trim()) return;
+    setIsGeneratingThumbnail(true);
+    setThumbnailResult(null);
+    try {
+      const response = await genAI.models.generateContent({
+        model: 'gemini-2.5-flash-image',
+        contents: { parts: [{ text: `High-quality YouTube thumbnail for: ${thumbnailPrompt}. Vibrant colors, engaging composition, no text.` }] },
+        config: { imageConfig: { aspectRatio: "16:9" } }
+      });
+      for (const part of response.candidates[0].content.parts) {
+        if (part.inlineData) {
+          setThumbnailResult(`data:image/png;base64,${part.inlineData.data}`);
+        }
+      }
+    } catch (err) {
+      console.error("Thumbnail error:", err);
+      setError("Failed to generate thumbnail.");
+    } finally {
+      setIsGeneratingThumbnail(false);
+    }
+  };
+
+  const generateLogo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!logoPrompt.trim()) return;
+    setIsGeneratingLogo(true);
+    setLogoResult(null);
+    try {
+      const response = await genAI.models.generateContent({
+        model: 'gemini-2.5-flash-image',
+        contents: { parts: [{ text: `Professional minimalist logo design for: ${logoPrompt}. Clean lines, vector style, white background.` }] },
+        config: { imageConfig: { aspectRatio: "1:1" } }
+      });
+      for (const part of response.candidates[0].content.parts) {
+        if (part.inlineData) {
+          setLogoResult(`data:image/png;base64,${part.inlineData.data}`);
+        }
+      }
+    } catch (err) {
+      console.error("Logo error:", err);
+      setError("Failed to generate logo.");
+    } finally {
+      setIsGeneratingLogo(false);
+    }
+  };
+
+  const generateBusinessCard = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!businessCardPrompt.trim()) return;
+    setIsGeneratingBusinessCard(true);
+    setBusinessCardResult(null);
+    try {
+      const response = await genAI.models.generateContent({
+        model: 'gemini-2.5-flash-image',
+        contents: { parts: [{ text: `Modern professional business card design for: ${businessCardPrompt}. Front side, elegant layout.` }] },
+        config: { imageConfig: { aspectRatio: "16:9" } }
+      });
+      for (const part of response.candidates[0].content.parts) {
+        if (part.inlineData) {
+          setBusinessCardResult(`data:image/png;base64,${part.inlineData.data}`);
+        }
+      }
+    } catch (err) {
+      console.error("Business card error:", err);
+      setError("Failed to generate business card.");
+    } finally {
+      setIsGeneratingBusinessCard(false);
+    }
+  };
+
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!chatInput.trim() || !user) return;
@@ -1074,141 +1531,95 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen pb-20">
+    <div className="min-h-screen bg-neutral-950 text-white selection:bg-emerald-500/30">
+      <Sidebar 
+        view={view} 
+        setView={setView} 
+        user={user} 
+        isAdminUser={isAdminUser}
+        isOpen={isSidebarOpen}
+        setIsOpen={setIsSidebarOpen}
+      />
       {/* Header */}
-      <header className="fixed top-0 w-full z-50 bg-neutral-950/80 backdrop-blur-md border-b border-white/5">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => setView("audit")}>
-            <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center">
-              <Zap className="w-5 h-5 text-neutral-950 fill-current" />
-            </div>
-            <span className="font-bold text-xl tracking-tight">SEO Agent <span className="text-emerald-400">Pro</span></span>
-          </div>
-          
-          <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-neutral-400">
+      <header className={cn(
+        "fixed top-0 right-0 left-0 z-40 bg-neutral-950/80 backdrop-blur-md border-b border-white/5 transition-all duration-300 h-20",
+        isSidebarOpen ? "lg:left-[280px]" : "lg:left-20"
+      )}>
+        <div className="h-full px-6 flex items-center justify-between">
+          <div className="flex items-center gap-4">
             <button 
-              onClick={() => setView("audit")}
-              className={cn("hover:text-white transition-colors", view === "audit" && "text-white")}
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              className="p-2 hover:bg-white/5 rounded-lg text-neutral-400 transition-colors"
             >
-              Audit
+              {isSidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
-            {user && (
-              <>
-                <button 
-                  onClick={() => setView("tools")}
-                  className={cn("hover:text-white transition-colors flex items-center gap-2", view === "tools" && "text-white")}
-                >
-                  <LayoutGrid className="w-4 h-4" />
-                  Tools
-                </button>
-                <button 
-                  onClick={() => setView("keywords")}
-                  className={cn("hover:text-white transition-colors flex items-center gap-2", view === "keywords" && "text-white")}
-                >
-                  <Search className="w-4 h-4" />
-                  Keywords
-                </button>
-                <button 
-                  onClick={() => setView("writer")}
-                  className={cn("hover:text-white transition-colors flex items-center gap-2", view === "writer" && "text-white")}
-                >
-                  <FileText className="w-4 h-4" />
-                  Writer
-                </button>
-                <button 
-                  onClick={() => setView("images")}
-                  className={cn("hover:text-white transition-colors flex items-center gap-2", view === "images" && "text-white")}
-                >
-                  <ImageIcon className="w-4 h-4" />
-                  Images
-                </button>
-                <button 
-                  onClick={() => setView("video")}
-                  className={cn("hover:text-white transition-colors flex items-center gap-2", view === "video" && "text-white")}
-                >
-                  <Video className="w-4 h-4" />
-                  Video
-                </button>
-                <button 
-                  onClick={() => setView("speedtest")}
-                  className={cn("hover:text-white transition-colors flex items-center gap-2", view === "speedtest" && "text-white")}
-                >
-                  <Activity className="w-4 h-4" />
-                  Speed
-                </button>
-                <button 
-                  onClick={() => setView("naming")}
-                  className={cn("hover:text-white transition-colors flex items-center gap-2", view === "naming" && "text-white")}
-                >
-                  <Lightbulb className="w-4 h-4" />
-                  Naming
-                </button>
-                <button 
-                  onClick={() => setView("chat")}
-                  className={cn("hover:text-white transition-colors flex items-center gap-2", view === "chat" && "text-white")}
-                >
-                  <MessageSquare className="w-4 h-4" />
-                  Chat
-                </button>
-                {isAdminUser && (
-                  <button 
-                    onClick={() => setView("admin")}
-                    className={cn("hover:text-white transition-colors flex items-center gap-2", view === "admin" && "text-white")}
-                  >
-                    <Shield className="w-4 h-4" />
-                    Admin
-                  </button>
-                )}
-                <button 
-                  onClick={() => setView("code")}
-                  className={cn("hover:text-white transition-colors flex items-center gap-2", view === "code" && "text-white")}
-                >
-                  <CodeIcon className="w-4 h-4" />
-                  Forge
-                </button>
-                <button 
-                  onClick={() => setView("architect")}
-                  className={cn("hover:text-white transition-colors flex items-center gap-2", view === "architect" && "text-white")}
-                >
-                  <Layers className="w-4 h-4" />
-                  Architect
-                </button>
-                <button 
-                  onClick={() => setView("history")}
-                  className={cn("hover:text-white transition-colors flex items-center gap-2", view === "history" && "text-white")}
-                >
-                  <History className="w-4 h-4" />
-                  History
-                </button>
-              </>
-            )}
-          </nav>
+            <h2 className="text-sm font-bold uppercase tracking-widest text-neutral-500 hidden sm:block">
+              {view.replace(/([A-Z])/g, ' $1').trim()}
+            </h2>
+          </div>
 
           <div className="flex items-center gap-4">
-            {user ? (
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2 text-sm text-neutral-400">
-                  <img src={user.photoURL || ""} alt="" className="w-8 h-8 rounded-full border border-white/10" referrerPolicy="no-referrer" />
-                  <span className="hidden sm:inline">{user.displayName}</span>
-                </div>
-                <button onClick={logout} className="p-2 hover:bg-white/5 rounded-lg text-neutral-400 transition-colors">
-                  <LogOut className="w-5 h-5" />
+            {!user && (
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => {
+                    setAuthMode("signin");
+                    setIsAuthModalOpen(true);
+                  }}
+                  className="px-4 py-2 text-neutral-400 hover:text-white text-sm font-semibold transition-colors"
+                >
+                  Sign In
+                </button>
+                <button 
+                  onClick={() => {
+                    setAuthMode("signup");
+                    setIsAuthModalOpen(true);
+                  }}
+                  className="px-4 py-2 bg-white text-neutral-950 rounded-full text-sm font-semibold hover:bg-neutral-200 transition-colors flex items-center gap-2"
+                >
+                  <UserIcon className="w-4 h-4" />
+                  Sign Up
                 </button>
               </div>
-            ) : (
-              <button 
-                onClick={login}
-                className="px-4 py-2 bg-white text-neutral-950 rounded-full text-sm font-semibold hover:bg-neutral-200 transition-colors flex items-center gap-2"
-              >
-                <UserIcon className="w-4 h-4" />
-                Sign In
-              </button>
             )}
           </div>
         </div>
+
+        <AnimatePresence>
+          {error && (
+            <motion.div 
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className="absolute top-full left-0 right-0 p-4 bg-red-500/10 border-b border-red-500/20 backdrop-blur-md flex items-center justify-center gap-3 text-red-400 text-sm z-50"
+            >
+              <AlertCircle className="w-4 h-4" />
+              {error}
+              <button onClick={() => setError(null)} className="ml-4 hover:text-white">
+                <Trash2 className="w-4 h-4 rotate-45" />
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </header>
 
-      <main className="pt-32 px-6 max-w-7xl mx-auto">
+      <AnimatePresence>
+        {isAuthModalOpen && (
+          <AuthModal 
+            mode={authMode} 
+            setMode={setAuthMode} 
+            onClose={() => setIsAuthModalOpen(false)} 
+            onGoogleSignIn={login} 
+            setError={setError}
+          />
+        )}
+      </AnimatePresence>
+
+      <main className={cn(
+        "pt-32 px-6 pb-20 transition-all duration-300",
+        isSidebarOpen ? "lg:ml-[280px]" : "lg:ml-20"
+      )}>
+        <div className="max-w-7xl mx-auto">
         {view === "audit" && (
           <>
             <div className="text-center mb-16">
@@ -1455,6 +1866,13 @@ function AppContent() {
                 description="Generate creative business names and matching domain names instantly with AI."
                 onClick={() => setView("naming")}
                 badge="Creative"
+              />
+              <ToolDashboardCard 
+                icon={<QrCode className="w-6 h-6" />}
+                title="QR Generator"
+                description="Create custom, high-quality QR codes for your URLs, text, or contact info instantly."
+                onClick={() => setView("qr")}
+                badge="Utility"
               />
               <ToolDashboardCard 
                 icon={<BarChart3 className="w-6 h-6" />}
@@ -1942,6 +2360,153 @@ function AppContent() {
                       </div>
                     </div>
                   )}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {view === "qr" && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8 max-w-4xl mx-auto">
+            <div className="text-center space-y-4">
+              <div className="w-16 h-16 bg-emerald-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <QrCode className="w-8 h-8 text-emerald-400" />
+              </div>
+              <h1 className="text-4xl font-bold tracking-tight">QR <span className="gradient-text">Generator</span></h1>
+              <p className="text-neutral-400 max-w-xl mx-auto">
+                Generate high-quality, customizable QR codes for your websites, social media, or any text content.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="glass-panel p-8 space-y-6">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-widest text-neutral-500 ml-1">Content (URL or Text)</label>
+                  <textarea 
+                    value={qrInput}
+                    onChange={(e) => setQrInput(e.target.value)}
+                    placeholder="Enter URL or text here..."
+                    className="w-full h-32 bg-neutral-900 border border-white/10 rounded-xl p-4 text-white focus:border-emerald-500/50 outline-none transition-colors resize-none"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-widest text-neutral-500 ml-1">Size (px)</label>
+                    <input 
+                      type="number"
+                      value={qrSize}
+                      onChange={(e) => setQrSize(Number(e.target.value))}
+                      className="w-full bg-neutral-900 border border-white/10 rounded-xl p-3 text-white focus:border-emerald-500/50 outline-none transition-colors"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-widest text-neutral-500 ml-1">Error Level</label>
+                    <select 
+                      value={qrLevel}
+                      onChange={(e) => setQrLevel(e.target.value as any)}
+                      className="w-full bg-neutral-900 border border-white/10 rounded-xl p-3 text-white focus:border-emerald-500/50 outline-none transition-colors"
+                    >
+                      <option value="L">Low (7%)</option>
+                      <option value="M">Medium (15%)</option>
+                      <option value="Q">Quartile (25%)</option>
+                      <option value="H">High (30%)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-widest text-neutral-500 ml-1">Foreground</label>
+                    <div className="flex gap-2">
+                      <input 
+                        type="color"
+                        value={qrFgColor}
+                        onChange={(e) => setQrFgColor(e.target.value)}
+                        className="w-12 h-12 bg-transparent border-none cursor-pointer"
+                      />
+                      <input 
+                        type="text"
+                        value={qrFgColor}
+                        onChange={(e) => setQrFgColor(e.target.value)}
+                        className="flex-1 bg-neutral-900 border border-white/10 rounded-xl p-3 text-white text-xs font-mono"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold uppercase tracking-widest text-neutral-500 ml-1">Background</label>
+                    <div className="flex gap-2">
+                      <input 
+                        type="color"
+                        value={qrBgColor}
+                        onChange={(e) => setQrBgColor(e.target.value)}
+                        className="w-12 h-12 bg-transparent border-none cursor-pointer"
+                      />
+                      <input 
+                        type="text"
+                        value={qrBgColor}
+                        onChange={(e) => setQrBgColor(e.target.value)}
+                        className="flex-1 bg-neutral-900 border border-white/10 rounded-xl p-3 text-white text-xs font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3 p-4 bg-white/5 rounded-xl border border-white/5">
+                  <input 
+                    type="checkbox"
+                    id="includeMargin"
+                    checked={qrIncludeMargin}
+                    onChange={(e) => setQrIncludeMargin(e.target.checked)}
+                    className="w-5 h-5 rounded border-white/10 bg-neutral-900 text-emerald-500 focus:ring-emerald-500/50"
+                  />
+                  <label htmlFor="includeMargin" className="text-sm text-neutral-300 font-medium cursor-pointer">Include Margin</label>
+                </div>
+              </div>
+
+              <div className="glass-panel p-8 flex flex-col items-center justify-center space-y-8">
+                <div className="p-6 bg-white rounded-2xl shadow-2xl shadow-emerald-500/10">
+                  <QRCodeSVG 
+                    id="qr-code-svg"
+                    value={qrInput || "SEO Agent Pro"}
+                    size={200}
+                    fgColor={qrFgColor}
+                    bgColor={qrBgColor}
+                    level={qrLevel}
+                    includeMargin={qrIncludeMargin}
+                  />
+                </div>
+
+                <div className="w-full space-y-4">
+                  <button 
+                    onClick={() => {
+                      const svg = document.getElementById("qr-code-svg");
+                      if (svg) {
+                        const svgData = new XMLSerializer().serializeToString(svg);
+                        const canvas = document.createElement("canvas");
+                        const ctx = canvas.getContext("2d");
+                        const img = new Image();
+                        img.onload = () => {
+                          canvas.width = qrSize;
+                          canvas.height = qrSize;
+                          ctx?.drawImage(img, 0, 0, qrSize, qrSize);
+                          const pngFile = canvas.toDataURL("image/png");
+                          const downloadLink = document.createElement("a");
+                          downloadLink.download = `qr-code-${Date.now()}.png`;
+                          downloadLink.href = pngFile;
+                          downloadLink.click();
+                        };
+                        img.src = "data:image/svg+xml;base64," + btoa(svgData);
+                      }
+                    }}
+                    className="w-full py-4 bg-emerald-500 text-neutral-950 rounded-xl font-bold flex items-center justify-center gap-3 hover:bg-emerald-400 transition-all active:scale-[0.98]"
+                  >
+                    <Download className="w-5 h-5" />
+                    Download PNG ({qrSize}x{qrSize})
+                  </button>
+                  <p className="text-[10px] text-center text-neutral-500 uppercase tracking-widest">
+                    High-resolution export available
+                  </p>
                 </div>
               </div>
             </div>
@@ -2619,22 +3184,642 @@ function AppContent() {
             )}
           </motion.div>
         )}
-      </main>
 
-      {/* Footer */}
-      <footer className="mt-20 py-10 border-t border-white/5">
-        <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-2 opacity-50">
-            <Zap className="w-4 h-4" />
-            <span className="text-sm font-medium">SEO Agent Pro © 2026</span>
+        {view === "wordcounter" && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-4xl mx-auto space-y-8">
+            <div className="text-center">
+              <h1 className="text-4xl font-bold mb-4">Word <span className="gradient-text">Counter</span></h1>
+              <p className="text-neutral-400">Count words, characters, and sentences in real-time.</p>
+            </div>
+            <div className="glass-panel p-8 space-y-6">
+              <textarea 
+                placeholder="Paste your text here..."
+                value={wordCountText}
+                onChange={(e) => setWordCountText(e.target.value)}
+                rows={12}
+                className="w-full bg-neutral-900 border border-white/10 rounded-2xl px-6 py-4 outline-none focus:border-emerald-500 resize-none text-lg leading-relaxed"
+              />
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="p-4 bg-white/5 rounded-xl border border-white/5 text-center">
+                  <div className="text-2xl font-black text-emerald-400">{wordCountText.trim() ? wordCountText.trim().split(/\s+/).length : 0}</div>
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">Words</div>
+                </div>
+                <div className="p-4 bg-white/5 rounded-xl border border-white/5 text-center">
+                  <div className="text-2xl font-black text-emerald-400">{wordCountText.length}</div>
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">Characters</div>
+                </div>
+                <div className="p-4 bg-white/5 rounded-xl border border-white/5 text-center">
+                  <div className="text-2xl font-black text-emerald-400">{wordCountText.split(/[.!?]+/).filter(Boolean).length}</div>
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">Sentences</div>
+                </div>
+                <div className="p-4 bg-white/5 rounded-xl border border-white/5 text-center">
+                  <div className="text-2xl font-black text-emerald-400">{Math.ceil(wordCountText.trim().split(/\s+/).length / 200)}</div>
+                  <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">Reading Time (min)</div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {view === "rewrite" && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-4xl mx-auto space-y-8">
+            <div className="text-center">
+              <h1 className="text-4xl font-bold mb-4">Article <span className="gradient-text">Rewrite</span></h1>
+              <p className="text-neutral-400">Transform your content into engaging, unique, and SEO-friendly articles.</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-4">
+                <label className="text-xs font-bold uppercase tracking-widest text-neutral-500">Original Text</label>
+                <textarea 
+                  placeholder="Paste article to rewrite..."
+                  value={rewriteText}
+                  onChange={(e) => setRewriteText(e.target.value)}
+                  rows={15}
+                  className="w-full bg-neutral-900 border border-white/10 rounded-2xl px-6 py-4 outline-none focus:border-emerald-500 resize-none"
+                />
+                <button 
+                  onClick={rewriteArticle}
+                  disabled={isRewriting || !rewriteText.trim()}
+                  className="w-full bg-emerald-500 text-neutral-950 py-4 rounded-xl font-bold flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {isRewriting ? <Loader2 className="w-5 h-5 animate-spin" /> : <RefreshCw className="w-5 h-5" />}
+                  {isRewriting ? "Rewriting..." : "Rewrite Article"}
+                </button>
+              </div>
+              <div className="space-y-4">
+                <label className="text-xs font-bold uppercase tracking-widest text-neutral-500">Rewritten Result</label>
+                <div className="w-full bg-neutral-900 border border-white/10 rounded-2xl px-6 py-4 min-h-[400px] prose prose-invert max-w-none">
+                  {rewriteResult ? (
+                    <ReactMarkdown>{rewriteResult}</ReactMarkdown>
+                  ) : (
+                    <div className="h-full flex items-center justify-center text-neutral-600 italic">
+                      Result will appear here...
+                    </div>
+                  )}
+                </div>
+                {rewriteResult && (
+                  <button 
+                    onClick={() => navigator.clipboard.writeText(rewriteResult)}
+                    className="w-full bg-white/5 hover:bg-white/10 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all"
+                  >
+                    <Copy className="w-4 h-4" />
+                    Copy to Clipboard
+                  </button>
+                )}
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {view === "plagiarism" && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-4xl mx-auto space-y-8">
+            <div className="text-center">
+              <h1 className="text-4xl font-bold mb-4">Plagiarism <span className="gradient-text">Checker</span></h1>
+              <p className="text-neutral-400">Check your content for originality and potential matches.</p>
+            </div>
+            <div className="glass-panel p-8 space-y-6">
+              <textarea 
+                placeholder="Paste text to check for plagiarism..."
+                value={plagiarismText}
+                onChange={(e) => setPlagiarismText(e.target.value)}
+                rows={10}
+                className="w-full bg-neutral-900 border border-white/10 rounded-2xl px-6 py-4 outline-none focus:border-emerald-500 resize-none"
+              />
+              <button 
+                onClick={checkPlagiarism}
+                disabled={isCheckingPlagiarism || !plagiarismText.trim()}
+                className="w-full bg-emerald-500 text-neutral-950 py-4 rounded-xl font-bold flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {isCheckingPlagiarism ? <Loader2 className="w-5 h-5 animate-spin" /> : <ScanSearch className="w-5 h-5" />}
+                {isCheckingPlagiarism ? "Checking..." : "Check Originality"}
+              </button>
+
+              {plagiarismResult && (
+                <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="p-6 bg-white/5 rounded-2xl border border-white/10 space-y-6">
+                  <div className="flex items-center justify-between">
+                    <h3 className="font-bold text-xl">Analysis Result</h3>
+                    <div className={cn(
+                      "px-4 py-2 rounded-full font-black text-2xl",
+                      plagiarismResult.score < 20 ? "text-emerald-400 bg-emerald-400/10" :
+                      plagiarismResult.score < 50 ? "text-yellow-400 bg-yellow-400/10" :
+                      "text-red-400 bg-red-400/10"
+                    )}>
+                      {plagiarismResult.score}% Match
+                    </div>
+                  </div>
+                  <p className="text-neutral-300 leading-relaxed">{plagiarismResult.analysis}</p>
+                  {plagiarismResult.sources && plagiarismResult.sources.length > 0 && (
+                    <div className="space-y-3">
+                      <h4 className="text-xs font-bold uppercase tracking-widest text-neutral-500">Potential Sources</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {plagiarismResult.sources.map((source: string, i: number) => (
+                          <span key={i} className="px-3 py-1 bg-white/5 rounded-lg text-sm text-neutral-400 border border-white/5">{source}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              )}
+            </div>
+          </motion.div>
+        )}
+
+        {view === "backlinks" && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-4xl mx-auto space-y-8">
+            <div className="text-center">
+              <h1 className="text-4xl font-bold mb-4">Backlink <span className="gradient-text">Analyzer</span></h1>
+              <p className="text-neutral-400">Discover backlink opportunities and analyze your domain's link profile.</p>
+            </div>
+            <div className="glass-panel p-8 space-y-6">
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  placeholder="Enter domain (e.g., example.com)"
+                  value={backlinkUrl}
+                  onChange={(e) => setBacklinkUrl(e.target.value)}
+                  className="flex-1 bg-neutral-900 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-emerald-500"
+                />
+                <button 
+                  onClick={checkBacklinks}
+                  disabled={isCheckingBacklinks || !backlinkUrl.trim()}
+                  className="bg-emerald-500 text-neutral-950 px-6 py-3 rounded-xl font-bold flex items-center gap-2 disabled:opacity-50"
+                >
+                  {isCheckingBacklinks ? <Loader2 className="w-5 h-5 animate-spin" /> : <Link className="w-5 h-5" />}
+                  Analyze
+                </button>
+              </div>
+
+              {backlinkResult && (
+                <div className="space-y-8">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="p-6 bg-white/5 rounded-2xl border border-white/10 text-center">
+                      <div className="text-3xl font-black text-emerald-400">{backlinkResult.totalBacklinks}</div>
+                      <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">Total Backlinks</div>
+                    </div>
+                    <div className="p-6 bg-white/5 rounded-2xl border border-white/10 text-center">
+                      <div className="text-3xl font-black text-emerald-400">{backlinkResult.referringDomains}</div>
+                      <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">Referring Domains</div>
+                    </div>
+                    <div className="p-6 bg-white/5 rounded-2xl border border-white/10 text-center">
+                      <div className="text-3xl font-black text-emerald-400">{backlinkResult.domainAuthority}/100</div>
+                      <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">Domain Authority</div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <h3 className="font-bold text-lg">Growth Opportunities</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {backlinkResult.opportunities.map((opt: any, i: number) => (
+                        <div key={i} className="p-4 bg-white/5 rounded-xl border border-white/5 space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-bold text-emerald-400">{opt.type}</span>
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">Difficulty: {opt.difficulty}</span>
+                          </div>
+                          <p className="text-xs text-neutral-400 leading-relaxed">{opt.description}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+
+        {view === "domainvalue" && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-4xl mx-auto space-y-8">
+            <div className="text-center">
+              <h1 className="text-4xl font-bold mb-4">Domain <span className="gradient-text">Appraisal</span></h1>
+              <p className="text-neutral-400">Estimate the market value of any domain name using AI analysis.</p>
+            </div>
+            <div className="glass-panel p-8 space-y-6">
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  placeholder="Enter domain (e.g., premium.com)"
+                  value={domainValueUrl}
+                  onChange={(e) => setDomainValueUrl(e.target.value)}
+                  className="flex-1 bg-neutral-900 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-emerald-500"
+                />
+                <button 
+                  onClick={checkDomainValue}
+                  disabled={isCheckingDomainValue || !domainValueUrl.trim()}
+                  className="bg-emerald-500 text-neutral-950 px-6 py-3 rounded-xl font-bold flex items-center gap-2 disabled:opacity-50"
+                >
+                  {isCheckingDomainValue ? <Loader2 className="w-5 h-5 animate-spin" /> : <DollarSign className="w-5 h-5" />}
+                  Appraise
+                </button>
+              </div>
+
+              {domainValueResult && (
+                <div className="space-y-8">
+                  <div className="text-center p-12 bg-emerald-500/5 rounded-3xl border border-emerald-500/20">
+                    <div className="text-sm font-bold uppercase tracking-widest text-emerald-500 mb-2">Estimated Market Value</div>
+                    <div className="text-6xl font-black text-white mb-4">{domainValueResult.estimatedValue}</div>
+                    <div className="flex items-center justify-center gap-2 text-neutral-400">
+                      <TrendingUp className="w-4 h-4" />
+                      <span>Value Trend: <span className="text-emerald-400 font-bold">{domainValueResult.trend}</span></span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-4">
+                      <h3 className="font-bold text-lg">Valuation Factors</h3>
+                      <div className="space-y-3">
+                        {domainValueResult.factors.map((factor: any, i: number) => (
+                          <div key={i} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/5">
+                            <span className="text-sm text-neutral-300">{factor.name}</span>
+                            <span className={cn(
+                              "text-xs font-bold px-2 py-1 rounded",
+                              factor.impact === 'High' ? "text-emerald-400 bg-emerald-400/10" : "text-neutral-400 bg-white/5"
+                            )}>{factor.impact} Impact</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="space-y-4">
+                      <h3 className="font-bold text-lg">Comparable Sales</h3>
+                      <div className="space-y-3">
+                        {domainValueResult.comparables.map((comp: any, i: number) => (
+                          <div key={i} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/5">
+                            <span className="text-sm font-mono text-neutral-400">{comp.domain}</span>
+                            <span className="text-sm font-bold text-white">{comp.price}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+
+        {view === "domaintraffic" && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-4xl mx-auto space-y-8">
+            <div className="text-center">
+              <h1 className="text-4xl font-bold mb-4">Traffic <span className="gradient-text">Insights</span></h1>
+              <p className="text-neutral-400">Estimate monthly traffic and audience sources for any website.</p>
+            </div>
+            <div className="glass-panel p-8 space-y-6">
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  placeholder="Enter website URL"
+                  value={domainTrafficUrl}
+                  onChange={(e) => setDomainTrafficUrl(e.target.value)}
+                  className="flex-1 bg-neutral-900 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-emerald-500"
+                />
+                <button 
+                  onClick={checkDomainTraffic}
+                  disabled={isCheckingDomainTraffic || !domainTrafficUrl.trim()}
+                  className="bg-emerald-500 text-neutral-950 px-6 py-3 rounded-xl font-bold flex items-center gap-2 disabled:opacity-50"
+                >
+                  {isCheckingDomainTraffic ? <Loader2 className="w-5 h-5 animate-spin" /> : <TrendingUp className="w-5 h-5" />}
+                  Analyze Traffic
+                </button>
+              </div>
+
+              {domainTrafficResult && (
+                <div className="space-y-8">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="p-6 bg-white/5 rounded-2xl border border-white/10 text-center">
+                      <div className="text-3xl font-black text-emerald-400">{domainTrafficResult.monthlyVisits}</div>
+                      <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">Monthly Visits</div>
+                    </div>
+                    <div className="p-6 bg-white/5 rounded-2xl border border-white/10 text-center">
+                      <div className="text-3xl font-black text-emerald-400">{domainTrafficResult.bounceRate}</div>
+                      <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">Bounce Rate</div>
+                    </div>
+                    <div className="p-6 bg-white/5 rounded-2xl border border-white/10 text-center">
+                      <div className="text-3xl font-black text-emerald-400">{domainTrafficResult.avgDuration}</div>
+                      <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">Avg. Duration</div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="space-y-4">
+                      <h3 className="font-bold text-lg">Traffic Sources</h3>
+                      <div className="space-y-4">
+                        {domainTrafficResult.sources.map((source: any, i: number) => (
+                          <div key={i} className="space-y-1">
+                            <div className="flex justify-between text-xs font-bold uppercase tracking-widest mb-1">
+                              <span className="text-neutral-400">{source.name}</span>
+                              <span className="text-emerald-400">{source.percentage}%</span>
+                            </div>
+                            <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-emerald-500" 
+                                style={{ width: `${source.percentage}%` }}
+                              ></div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="space-y-4">
+                      <h3 className="font-bold text-lg">Top Countries</h3>
+                      <div className="space-y-3">
+                        {domainTrafficResult.topCountries.map((country: any, i: number) => (
+                          <div key={i} className="flex items-center justify-between p-3 bg-white/5 rounded-lg border border-white/5">
+                            <span className="text-sm text-neutral-300">{country.name}</span>
+                            <span className="text-sm font-bold text-white">{country.percentage}%</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+
+        {view === "hashtags" && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-4xl mx-auto space-y-8">
+            <div className="text-center">
+              <h1 className="text-4xl font-bold mb-4">Viral <span className="gradient-text">Hashtags</span></h1>
+              <p className="text-neutral-400">Generate high-reach hashtags for your social media videos and posts.</p>
+            </div>
+            <div className="glass-panel p-8 space-y-6">
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  placeholder="Enter video topic or niche (e.g., AI SEO tools)"
+                  value={hashtagTopic}
+                  onChange={(e) => setHashtagTopic(e.target.value)}
+                  className="flex-1 bg-neutral-900 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-emerald-500"
+                />
+                <button 
+                  onClick={generateHashtags}
+                  disabled={isGeneratingHashtags || !hashtagTopic.trim()}
+                  className="bg-emerald-500 text-neutral-950 px-6 py-3 rounded-xl font-bold flex items-center gap-2 disabled:opacity-50"
+                >
+                  {isGeneratingHashtags ? <Loader2 className="w-5 h-5 animate-spin" /> : <Hash className="w-5 h-5" />}
+                  Generate
+                </button>
+              </div>
+
+              {hashtagResult && (
+                <div className="space-y-6">
+                  <div className="flex flex-wrap gap-2">
+                    {hashtagResult.hashtags.map((tag: string, i: number) => (
+                      <span key={i} className="px-4 py-2 bg-emerald-500/10 text-emerald-400 rounded-full font-bold text-sm border border-emerald-500/20">
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                  <div className="p-6 bg-white/5 rounded-2xl border border-white/10 space-y-4">
+                    <h3 className="font-bold text-lg">Strategy Tips</h3>
+                    <ul className="space-y-2">
+                      {hashtagResult.strategy.map((tip: string, i: number) => (
+                        <li key={i} className="text-sm text-neutral-400 flex items-start gap-3">
+                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 mt-1.5 flex-shrink-0"></div>
+                          {tip}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <button 
+                    onClick={() => navigator.clipboard.writeText(hashtagResult.hashtags.join(' '))}
+                    className="w-full bg-white/5 hover:bg-white/10 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-2 transition-all"
+                  >
+                    <Copy className="w-4 h-4" />
+                    Copy All Hashtags
+                  </button>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+
+        {view === "socialkeywords" && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-4xl mx-auto space-y-8">
+            <div className="text-center">
+              <h1 className="text-4xl font-bold mb-4">Social <span className="gradient-text">Keywords</span></h1>
+              <p className="text-neutral-400">Research trending keywords and topics for social media platforms.</p>
+            </div>
+            <div className="glass-panel p-8 space-y-6">
+              <div className="flex gap-2">
+                <input 
+                  type="text" 
+                  placeholder="Enter niche or industry (e.g., Digital Marketing)"
+                  value={socialKeywordNiche}
+                  onChange={(e) => setSocialKeywordNiche(e.target.value)}
+                  className="flex-1 bg-neutral-900 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-emerald-500"
+                />
+                <button 
+                  onClick={researchSocialKeywords}
+                  disabled={isResearchingSocialKeywords || !socialKeywordNiche.trim()}
+                  className="bg-emerald-500 text-neutral-950 px-6 py-3 rounded-xl font-bold flex items-center gap-2 disabled:opacity-50"
+                >
+                  {isResearchingSocialKeywords ? <Loader2 className="w-5 h-5 animate-spin" /> : <Share2 className="w-5 h-5" />}
+                  Research
+                </button>
+              </div>
+
+              {socialKeywordResult && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {socialKeywordResult.platforms.map((platform: any, i: number) => (
+                    <div key={i} className="p-6 bg-white/5 rounded-2xl border border-white/10 space-y-4">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-bold text-lg text-emerald-400">{platform.name}</h3>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-500">Trending Now</span>
+                      </div>
+                      <div className="space-y-3">
+                        {platform.keywords.map((kw: any, j: number) => (
+                          <div key={j} className="flex items-center justify-between p-2 bg-black/20 rounded-lg">
+                            <span className="text-sm text-neutral-300">{kw.term}</span>
+                            <span className="text-xs font-bold text-emerald-500">{kw.trend}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+
+        {view === "thumbnail" && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-4xl mx-auto space-y-8">
+            <div className="text-center">
+              <h1 className="text-4xl font-bold mb-4">Thumbnail <span className="gradient-text">Studio</span></h1>
+              <p className="text-neutral-400">Generate eye-catching YouTube thumbnails with AI.</p>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="space-y-6">
+                <div className="glass-panel p-6 space-y-4">
+                  <div>
+                    <label className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-2 block">Video Topic</label>
+                    <textarea 
+                      placeholder="e.g., How to build a SaaS in 24 hours with AI..."
+                      value={thumbnailPrompt}
+                      onChange={(e) => setThumbnailPrompt(e.target.value)}
+                      rows={4}
+                      className="w-full bg-neutral-900 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-emerald-500 resize-none"
+                    />
+                  </div>
+                  <button 
+                    onClick={generateThumbnail}
+                    disabled={isGeneratingThumbnail || !thumbnailPrompt.trim()}
+                    className="w-full bg-emerald-500 text-neutral-950 py-4 rounded-xl font-bold flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    {isGeneratingThumbnail ? <Loader2 className="w-5 h-5 animate-spin" /> : <ImagePlus className="w-5 h-5" />}
+                    Generate Thumbnail
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div className="glass-panel aspect-video flex items-center justify-center overflow-hidden relative group">
+                  {thumbnailResult ? (
+                    <>
+                      <img src={thumbnailResult} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <a href={thumbnailResult} download="thumbnail.png" className="p-3 bg-white text-neutral-950 rounded-full hover:scale-110 transition-transform">
+                          <Download className="w-6 h-6" />
+                        </a>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center space-y-4">
+                      <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto text-neutral-500">
+                        <ImagePlus className="w-8 h-8" />
+                      </div>
+                      <p className="text-neutral-500 italic">Thumbnail preview will appear here</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {view === "logo" && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-4xl mx-auto space-y-8">
+            <div className="text-center">
+              <h1 className="text-4xl font-bold mb-4">Logo <span className="gradient-text">Designer</span></h1>
+              <p className="text-neutral-400">Create minimalist, modern logos for your brand instantly.</p>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="space-y-6">
+                <div className="glass-panel p-6 space-y-4">
+                  <div>
+                    <label className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-2 block">Brand Name & Concept</label>
+                    <textarea 
+                      placeholder="e.g., 'EcoPulse' - A modern tech logo with a leaf and pulse line..."
+                      value={logoPrompt}
+                      onChange={(e) => setLogoPrompt(e.target.value)}
+                      rows={4}
+                      className="w-full bg-neutral-900 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-emerald-500 resize-none"
+                    />
+                  </div>
+                  <button 
+                    onClick={generateLogo}
+                    disabled={isGeneratingLogo || !logoPrompt.trim()}
+                    className="w-full bg-emerald-500 text-neutral-950 py-4 rounded-xl font-bold flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    {isGeneratingLogo ? <Loader2 className="w-5 h-5 animate-spin" /> : <Palette className="w-5 h-5" />}
+                    Generate Logo
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div className="glass-panel aspect-square flex items-center justify-center overflow-hidden relative group max-w-md mx-auto">
+                  {logoResult ? (
+                    <>
+                      <img src={logoResult} className="w-full h-full object-contain p-8" referrerPolicy="no-referrer" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <a href={logoResult} download="logo.png" className="p-3 bg-white text-neutral-950 rounded-full hover:scale-110 transition-transform">
+                          <Download className="w-6 h-6" />
+                        </a>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center space-y-4">
+                      <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto text-neutral-500">
+                        <Palette className="w-8 h-8" />
+                      </div>
+                      <p className="text-neutral-500 italic">Logo preview will appear here</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {view === "businesscard" && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="max-w-4xl mx-auto space-y-8">
+            <div className="text-center">
+              <h1 className="text-4xl font-bold mb-4">Business <span className="gradient-text">Card</span></h1>
+              <p className="text-neutral-400">Design professional business cards with AI-driven layouts.</p>
+            </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="space-y-6">
+                <div className="glass-panel p-6 space-y-4">
+                  <div>
+                    <label className="text-xs font-bold uppercase tracking-widest text-neutral-500 mb-2 block">Contact Info & Style</label>
+                    <textarea 
+                      placeholder="e.g., John Doe, CEO of TechFlow. Minimalist dark theme with gold accents..."
+                      value={businessCardPrompt}
+                      onChange={(e) => setBusinessCardPrompt(e.target.value)}
+                      rows={4}
+                      className="w-full bg-neutral-900 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-emerald-500 resize-none"
+                    />
+                  </div>
+                  <button 
+                    onClick={generateBusinessCard}
+                    disabled={isGeneratingBusinessCard || !businessCardPrompt.trim()}
+                    className="w-full bg-emerald-500 text-neutral-950 py-4 rounded-xl font-bold flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    {isGeneratingBusinessCard ? <Loader2 className="w-5 h-5 animate-spin" /> : <CreditCard className="w-5 h-5" />}
+                    Generate Business Card
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-4">
+                <div className="glass-panel aspect-[1.75/1] flex items-center justify-center overflow-hidden relative group">
+                  {businessCardResult ? (
+                    <>
+                      <img src={businessCardResult} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <a href={businessCardResult} download="business-card.png" className="p-3 bg-white text-neutral-950 rounded-full hover:scale-110 transition-transform">
+                          <Download className="w-6 h-6" />
+                        </a>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center space-y-4">
+                      <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto text-neutral-500">
+                        <CreditCard className="w-8 h-8" />
+                      </div>
+                      <p className="text-neutral-500 italic">Business card preview will appear here</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+
+        {/* Footer */}
+        <footer className="mt-20 py-10 border-t border-white/5">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-2 opacity-50">
+              <Zap className="w-4 h-4" />
+              <span className="text-sm font-medium">SEO Agent Pro © 2026</span>
+            </div>
+            <div className="flex items-center gap-6 text-sm text-neutral-500">
+              <a href="#" className="hover:text-white transition-colors">Privacy</a>
+              <a href="#" className="hover:text-white transition-colors">Terms</a>
+              <a href="#" className="hover:text-white transition-colors">API Docs</a>
+            </div>
           </div>
-          <div className="flex items-center gap-6 text-sm text-neutral-500">
-            <a href="#" className="hover:text-white transition-colors">Privacy</a>
-            <a href="#" className="hover:text-white transition-colors">Terms</a>
-            <a href="#" className="hover:text-white transition-colors">API Docs</a>
-          </div>
-        </div>
-      </footer>
+        </footer>
+      </div>
+    </main>
 
       <style>{`
         .markdown-content h1 { @apply text-2xl font-bold mb-4 mt-6 text-white; }
@@ -2647,6 +3832,173 @@ function AppContent() {
         .markdown-content strong { @apply text-emerald-400 font-semibold; }
       `}</style>
     </div>
+  );
+}
+
+function AuthModal({ mode, setMode, onClose, onGoogleSignIn, setError }: { mode: "signin" | "signup"; setMode: (m: "signin" | "signup") => void; onClose: () => void; onGoogleSignIn: () => void; setError: (e: string | null) => void }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleEmailAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+    try {
+      if (mode === "signup") {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        if (name) {
+          await updateProfile(userCredential.user, { displayName: name });
+        }
+      } else {
+        await signInWithEmailAndPassword(auth, email, password);
+      }
+      onClose();
+    } catch (err: any) {
+      console.error("Auth error:", err);
+      setError(err.message || "Authentication failed. Please check your credentials.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-neutral-950/60 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <motion.div 
+        initial={{ scale: 0.9, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.9, opacity: 0, y: 20 }}
+        className="glass-panel w-full max-w-md overflow-hidden relative"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="p-8 space-y-8">
+          <div className="text-center space-y-2">
+            <div className="w-12 h-12 bg-emerald-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-500/20">
+              <Zap className="w-6 h-6 text-neutral-950 fill-current" />
+            </div>
+            <h2 className="text-3xl font-bold text-white tracking-tight">
+              {mode === "signin" ? "Welcome Back" : "Create Account"}
+            </h2>
+            <p className="text-neutral-400 text-sm">
+              {mode === "signin" 
+                ? "Sign in to access your SEO dashboard and tools." 
+                : "Join SEO Agent Pro to start optimizing your web presence."}
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <button 
+              onClick={onGoogleSignIn}
+              className="w-full py-3 px-4 bg-white text-neutral-950 rounded-xl font-bold flex items-center justify-center gap-3 hover:bg-neutral-200 transition-all active:scale-[0.98]"
+            >
+              <svg className="w-5 h-5" viewBox="0 0 24 24">
+                <path
+                  fill="currentColor"
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                />
+                <path
+                  fill="currentColor"
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                />
+                <path
+                  fill="currentColor"
+                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"
+                />
+                <path
+                  fill="currentColor"
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                />
+              </svg>
+              Continue with Google
+            </button>
+
+            <div className="relative py-4">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-white/5"></div>
+              </div>
+              <div className="relative flex justify-center text-xs uppercase">
+                <span className="bg-neutral-900 px-2 text-neutral-500 font-medium tracking-widest">Or continue with</span>
+              </div>
+            </div>
+
+            <form onSubmit={handleEmailAuth} className="space-y-3">
+              {mode === "signup" && (
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 ml-1">Full Name</label>
+                  <input 
+                    type="text"
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="John Doe"
+                    className="w-full h-12 bg-white/5 rounded-xl border border-white/10 px-4 text-white focus:border-emerald-500/50 outline-none transition-colors"
+                  />
+                </div>
+              )}
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 ml-1">Email Address</label>
+                <input 
+                  type="email"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="w-full h-12 bg-white/5 rounded-xl border border-white/10 px-4 text-white focus:border-emerald-500/50 outline-none transition-colors"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold uppercase tracking-widest text-neutral-500 ml-1">Password</label>
+                <input 
+                  type="password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full h-12 bg-white/5 rounded-xl border border-white/10 px-4 text-white focus:border-emerald-500/50 outline-none transition-colors"
+                />
+              </div>
+              <button 
+                type="submit"
+                disabled={isLoading}
+                className="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-neutral-950 rounded-xl font-bold transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                {mode === "signin" ? "Sign In" : "Sign Up"}
+              </button>
+            </form>
+            <p className="text-[10px] text-center text-neutral-600 mt-2">
+              Secure authentication powered by Firebase.
+            </p>
+          </div>
+
+          <div className="pt-4 border-t border-white/5 text-center">
+            <button 
+              onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
+              className="text-sm text-neutral-400 hover:text-white transition-colors"
+            >
+              {mode === "signin" ? "Don't have an account? " : "Already have an account? "}
+              <span className="text-emerald-400 font-bold underline underline-offset-4">
+                {mode === "signin" ? "Sign Up" : "Sign In"}
+              </span>
+            </button>
+          </div>
+        </div>
+        
+        <button 
+          onClick={onClose}
+          className="absolute top-4 right-4 p-2 text-neutral-500 hover:text-white transition-colors"
+        >
+          <Trash2 className="w-5 h-5 rotate-45" />
+        </button>
+      </motion.div>
+    </motion.div>
   );
 }
 
