@@ -1,0 +1,92 @@
+{
+  "entities": {
+    "Audit": {
+      "title": "Audit",
+      "description": "A website SEO audit result",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "The UID of the user who performed the audit" },
+        "url": { "type": "string", "description": "The URL of the website audited" },
+        "timestamp": { "type": "string", "format": "date-time", "description": "When the audit was performed" },
+        "score": { "type": "number", "description": "The SEO score (0-100)" },
+        "auditData": { "type": "object", "description": "The raw technical audit data" },
+        "aiAnalysis": { "type": "object", "description": "The AI-generated analysis and suggestions" }
+      },
+      "required": ["userId", "url", "timestamp", "score", "auditData", "aiAnalysis"]
+    },
+    "BlogPost": {
+      "title": "Blog Post",
+      "description": "An AI-generated SEO friendly blog post",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "imageUrl": { "type": "string" },
+        "targetKeywords": { "type": "array", "items": { "type": "string" } },
+        "status": { "type": "string", "enum": ["draft", "published"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "content", "status"]
+    },
+    "Keyword": {
+      "title": "Keyword",
+      "description": "A researched keyword",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "term": { "type": "string" },
+        "difficulty": { "type": "number" },
+        "volume": { "type": "string" },
+        "intent": { "type": "string" }
+      },
+      "required": ["userId", "term"]
+    },
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "User information and settings",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email", "description": "The user's email address" },
+        "displayName": { "type": "string", "description": "The user's display name" },
+        "photoURL": { "type": "string", "description": "The user's profile photo URL" },
+        "role": { "type": "string", "enum": ["user", "admin"], "description": "The user's role" }
+      },
+      "required": ["email", "displayName"]
+    },
+    "ChatMessage": {
+      "title": "Chat Message",
+      "description": "A message in a real-time chat between user and AI",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "description": "The UID of the user who sent the message" },
+        "text": { "type": "string", "description": "The content of the message" },
+        "sender": { "type": "string", "enum": ["user", "ai"], "description": "Who sent the message" },
+        "timestamp": { "type": "string", "format": "date-time", "description": "When the message was sent" }
+      },
+      "required": ["userId", "text", "sender", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/audits/{auditId}": {
+      "schema": "Audit",
+      "description": "Collection of SEO audits"
+    },
+    "/blog_posts/{postId}": {
+      "schema": "BlogPost",
+      "description": "Collection of generated blog posts"
+    },
+    "/keywords/{keywordId}": {
+      "schema": "Keyword",
+      "description": "Collection of researched keywords"
+    },
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profiles"
+    },
+    "/chats/{chatId}": {
+      "schema": "ChatMessage",
+      "description": "Real-time chat messages"
+    }
+  }
+}
